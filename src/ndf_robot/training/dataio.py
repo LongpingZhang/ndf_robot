@@ -15,14 +15,15 @@ class JointOccTrainDataset(Dataset):
 
         # Path setup (change to folder where your training data is kept)
         ## these are the names of the full dataset folders
-        mug_path = osp.join(path_util.get_ndf_data(), 'training_data/mug_table_all_pose_4_cam_half_occ_full_rand_scale')
-        bottle_path = osp.join(path_util.get_ndf_data(), 'training/bottle_table_all_pose_4_cam_half_occ_full_rand_scale')
-        bowl_path = osp.join(path_util.get_ndf_data(), 'training/bowl_table_all_pose_4_cam_half_occ_full_rand_scale')
-
+        # mug_path = osp.join(path_util.get_ndf_data(), 'training_data/mug_table_all_pose_4_cam_half_occ_full_rand_scale')
+        # bottle_path = osp.join(path_util.get_ndf_data(), 'training/bottle_table_all_pose_4_cam_half_occ_full_rand_scale')
+        # bowl_path = osp.join(path_util.get_ndf_data(), 'training/bowl_table_all_pose_4_cam_half_occ_full_rand_scale')
+        
         ## these are the names of the mini-dataset folders, to ensure everything is up and running
-        # mug_path = osp.join(path_util.get_ndf_data(), 'training_data/test_mug')
-        # bottle_path = osp.join(path_util.get_ndf_data(), 'training_data/test_bottle')
-        # bowl_path = osp.join(path_util.get_ndf_data(), 'training_data/test_bowl')
+        mug_path = osp.join(path_util.get_ndf_data(), 'training_data/test_mug')
+        bottle_path = osp.join(path_util.get_ndf_data(), 'training_data/test_bottle')
+        bowl_path = osp.join(path_util.get_ndf_data(), 'training_data/test_bowl')
+        door_path = osp.join(path_util.get_ndf_data(), 'training_data/test_door')
 
         if obj_class == 'all':
             paths = [mug_path, bottle_path, bowl_path]
@@ -34,6 +35,8 @@ class JointOccTrainDataset(Dataset):
                 paths.append(bowl_path)
             if 'bottle' in obj_class:
                 paths.append(bottle_path)
+            if 'door' in obj_class:
+                paths.append(door_path)
 
         print('Loading from paths: ', paths)
 
@@ -65,8 +68,9 @@ class JointOccTrainDataset(Dataset):
         self.shapenet_mug_dict = pickle.load(open(osp.join(path_util.get_ndf_data(), 'training_data/occ_shapenet_mug.p'), 'rb'))
         self.shapenet_bowl_dict = pickle.load(open(osp.join(path_util.get_ndf_data(), 'training_data/occ_shapenet_bowl.p'), "rb"))
         self.shapenet_bottle_dict = pickle.load(open(osp.join(path_util.get_ndf_data(), 'training_data/occ_shapenet_bottle.p'), "rb"))
-
-        self.shapenet_dict = {'03797390': self.shapenet_mug_dict, '02880940': self.shapenet_bowl_dict, '02876657': self.shapenet_bottle_dict}
+        self.shapenet_door_dict = pickle.load(open(osp.join(path_util.get_ndf_data(), 'training_data/occ_shapenet_door.p'), "rb"))
+        
+        self.shapenet_dict = {'03797390': self.shapenet_mug_dict, '02880940': self.shapenet_bowl_dict, '02876657': self.shapenet_bottle_dict, '00005': self.shapenet_door_dict}
 
         self.projection_mode = "perspective"
 

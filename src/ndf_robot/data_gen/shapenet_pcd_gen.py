@@ -19,8 +19,10 @@ from ndf_robot.config.default_data_gen_cfg import get_data_gen_cfg_defaults
 from ndf_robot.utils import util, path_util
 from ndf_robot.robot.multicam import MultiCams
 from ndf_robot.utils.experiment_utils import DistractorSampler, DistractorObjManager, DistractorObjectEnv
+# from ndf_robot.share.globals import (
+#     SHAPENET_ID_DICT, bad_shapenet_mug_ids_list, bad_shapenet_bowls_ids_list, bad_shapenet_bottles_ids_list)
 from ndf_robot.share.globals import (
-    SHAPENET_ID_DICT, bad_shapenet_mug_ids_list, bad_shapenet_bowls_ids_list, bad_shapenet_bottles_ids_list)
+    SHAPENET_ID_DICT )
 
 
 def worker_gen(child_conn, global_dict, worker_flag_dict, seed, worker_id):
@@ -377,7 +379,7 @@ def main(args):
     total_filtered = len(objects_filtered)
     train_n = int(total_filtered * 0.9)
 
-    train_objects = sorted(objects_filtered)[1:train_n]
+    train_objects = sorted(objects_filtered)[0:train_n]
     test_objects = sorted(objects_filtered)[train_n:]
 
     print('\n\n\nTest objects: ')
@@ -431,7 +433,8 @@ def main(args):
         manager.global_dict['object_loop_index'] = i + args.resume_i
         manager.global_dict['shapenet_id'] = train_object
         manager.global_dict['upright_ori'] = upright_orientation
-        manager.global_dict['object_load_obj_file'] = osp.join(shapenet_centered_models_dir, train_object, 'models/model_128_df.obj')
+        # manager.global_dict['object_load_obj_file'] = osp.join(shapenet_centered_models_dir, train_object, 'models/model_128_df.obj')
+        manager.global_dict['object_load_obj_file'] = osp.join(shapenet_centered_models_dir, train_object, 'models/model_128_df.stl')
         manager.global_dict['trial_object'] = 0
         manager.sample_trials(samples_per_object)
 
