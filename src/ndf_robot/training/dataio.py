@@ -44,7 +44,7 @@ class JointOccTrainDataset(Dataset):
         for path in paths:
             files = list(sorted(glob.glob(path+"/*.npz")))
             n = len(files)
-            idx = int(0.9 * n)
+            idx = int(0.8 * n)
 
             if phase == 'train':
                 files = files[:idx]
@@ -65,13 +65,14 @@ class JointOccTrainDataset(Dataset):
         self.bs = bs
         self.hbs = hbs
 
-        self.shapenet_mug_dict = pickle.load(open(osp.join(path_util.get_ndf_data(), 'training_data/occ_shapenet_mug.p'), 'rb'))
-        self.shapenet_bowl_dict = pickle.load(open(osp.join(path_util.get_ndf_data(), 'training_data/occ_shapenet_bowl.p'), "rb"))
-        self.shapenet_bottle_dict = pickle.load(open(osp.join(path_util.get_ndf_data(), 'training_data/occ_shapenet_bottle.p'), "rb"))
-        self.shapenet_door_dict = pickle.load(open(osp.join(path_util.get_ndf_data(), 'training_data/occ_shapenet_door.p'), "rb"))
-        
-        self.shapenet_dict = {'03797390': self.shapenet_mug_dict, '02880940': self.shapenet_bowl_dict, '02876657': self.shapenet_bottle_dict, '00005': self.shapenet_door_dict}
+        # self.shapenet_mug_dict = pickle.load(open(osp.join(path_util.get_ndf_data(), 'training_data/occ_shapenet_mug.p'), 'rb'))
+        # self.shapenet_bowl_dict = pickle.load(open(osp.join(path_util.get_ndf_data(), 'training_data/occ_shapenet_bowl.p'), "rb"))
+        # self.shapenet_bottle_dict = pickle.load(open(osp.join(path_util.get_ndf_data(), 'training_data/occ_shapenet_bottle.p'), "rb"))
+        self.shapenet_door_dict = pickle.load(open('/content/shapenet_door.p', "rb"))
 
+        # self.shapenet_dict = {'03797390': self.shapenet_mug_dict, '02880940': self.shapenet_bowl_dict, '02876657': self.shapenet_bottle_dict, '00005': self.shapenet_door_dict}
+        self.shapenet_dict = {'00005': self.shapenet_door_dict}
+        
         self.projection_mode = "perspective"
 
         self.cache_file = None
@@ -83,7 +84,7 @@ class JointOccTrainDataset(Dataset):
         return len(self.files)
 
     def get_item(self, index):
-        try:
+        # try:
             data = np.load(self.files[index], allow_pickle=True)
             posecam =  data['object_pose_cam_frame']  # legacy naming, used to use pose expressed in camera frame. global reference frame doesn't matter though
 
@@ -218,10 +219,8 @@ class JointOccTrainDataset(Dataset):
                    'cam_poses': np.zeros(1)}  # cam poses not used
             return res, {'occ': torch.from_numpy(labels).float()}
 
-        except Exception as e:
-           print(e)
-        #    print(file)
-           return self.get_item(index=random.randint(0, self.__len__() - 1))
+        # except Exception as e:
+          # return self.get_item(index=random.randint(0, self.__len__() - 1))
 
     def __getitem__(self, index):
         return self.get_item(index)

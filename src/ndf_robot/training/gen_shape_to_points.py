@@ -10,9 +10,10 @@ import trimesh
 
 from ndf_robot.utils import path_util
 
-obj_class = 'mug'
+# obj_class = 'mug'
 #obj_class = 'bowl'
 #obj_class = 'bottle'
+obj_class = 'door'
 
 if __name__ == "__main__":
     if obj_class == 'mug':
@@ -24,6 +25,8 @@ if __name__ == "__main__":
     elif obj_class == 'bottle':
         # For bottle
         base_path = osp.join(path_util.get_ndf_data(), 'training/ShapeNetCore.v2/02876657')
+    else:
+        base_path = osp.join(path_util.get_ndf_obj_descriptions(), 'door_centered_obj')
     search_path = osp.join(base_path + "/*/", "models/model_normalized_128.mat")
     shapenet_paths = glob.glob(search_path)
 
@@ -40,7 +43,7 @@ if __name__ == "__main__":
     parse_dict = {}
 
     for shapenet_path in tqdm(shapenet_paths):
-        path = shapenet_path.replace("model_normalized_128.mat", "model_128_df.obj")
+        path = shapenet_path.replace("model_normalized_128.mat", "model_128_df.stl")
 
         voxel_bool = loadmat(shapenet_path)['voxel'].astype(np.bool)
         voxel_full = voxel_bool.astype(np.float32)
@@ -75,7 +78,8 @@ if __name__ == "__main__":
         coord = np.concatenate([voxel_surface_coord], axis=0)[rix]
         voxel_bool = np.concatenate([voxel_surface_bool[:, None]], axis=0)[rix]
 
-        dict_key = shapenet_path.split('ShapeNetCore.v2')[-1]
+        # dict_key = shapenet_path.split('ShapeNetCore.v2')[-1]
+        dict_key = '00005' + shapenet_path.split('door_centered_obj')[-1]
         parse_dict[dict_key] = (coord, voxel_bool, voxel_pos)
 
     pickle.dump(parse_dict, open("shapenet_%s.p" % obj_class, "wb"))

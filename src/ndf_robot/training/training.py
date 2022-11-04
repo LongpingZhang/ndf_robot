@@ -67,7 +67,7 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
         checkpoints_dir = os.path.join(model_dir, 'checkpoints')
         util.cond_mkdir(checkpoints_dir)
 
-        writer = SummaryWriter(summaries_dir)
+        writer = SummaryWriter(summaries_dir, flush_secs=30)
 
     total_steps = 0
     with tqdm(total=len(train_dataloader) * epochs) as pbar:
@@ -78,7 +78,7 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                            os.path.join(checkpoints_dir, 'model_epoch_%04d_iter_%06d.pth' % (epoch, total_steps)))
                 np.savetxt(os.path.join(checkpoints_dir, 'train_losses_%04d_iter_%06d.pth' % (epoch, total_steps)),
                            np.array(train_losses))
-
+            
             for step, (model_input, gt) in enumerate(train_dataloader):
                 model_input = util.dict_to_gpu(model_input)
                 gt = util.dict_to_gpu(gt)
@@ -89,7 +89,7 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                 losses = loss_fn(model_output, gt)
                 # losses = loss_fn(model_output, gt, model_input, model)
 
-                train_loss = 0.
+                train_loss = 0
                 for loss_name, loss in losses.items():
                     single_loss = loss.mean()
 
@@ -98,8 +98,9 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                     train_loss += single_loss
 
                 train_losses.append(train_loss.item())
-                if rank == 0:
-                    writer.add_scalar("total_train_loss", train_loss, total_steps)
+                
+                # if rank == 0:
+                #     writer.add_scalar("total_train_loss", train_loss, total_steps)
 
                 if not total_steps % steps_til_summary and rank == 0:
                     torch.save(model.state_dict(),
@@ -145,11 +146,20 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
 
                                 if val_i == batches_per_validation:
                                     break
-
+                        
+                        total_val_loss = 0
                         for loss_name, loss in val_losses.items():
                             single_loss = np.mean(loss)
                             summary_fn(model, model_input, gt, model_output, writer, total_steps, 'val_')
                             writer.add_scalar('val_' + loss_name, single_loss, total_steps)
+                            
+                            total_val_loss += single_loss
+                        
+                        # Write total_train_loss & total_val_loss
+                        writer.add_scalars('total_loss', 
+                                            {'total_train_loss': train_loss,
+                                            'total_val_loss': total_val_loss},
+                                            total_steps)
 
                         model.train()
 
@@ -237,8 +247,8 @@ def train_feature(model, train_dataloader, corr_model, epochs, lr, steps_til_sum
                     train_loss += single_loss
 
                 train_losses.append(train_loss.item())
-                if rank == 0:
-                    writer.add_scalar("total_train_loss", train_loss, total_steps)
+                # if rank == 0:
+                #     writer.add_scalar("total_train_loss", train_loss, total_steps)
 
                 if not total_steps % steps_til_summary and rank == 0:
                     torch.save(model.state_dict(),
@@ -285,12 +295,19 @@ def train_feature(model, train_dataloader, corr_model, epochs, lr, steps_til_sum
 
                                 if val_i == batches_per_validation:
                                     break
-
+                            
+                            total_val_loss = 0
                             for loss_name, loss in val_losses.items():
                                 single_loss = np.mean(loss)
                                 summary_fn(model, model_input, gt, model_output, writer, total_steps, 'val_')
                                 writer.add_scalar('val_' + loss_name, single_loss, total_steps)
-
+                                total_val_loss += single_loss
+                            
+                            writer.add_scalars('total_loss',
+                                                {'total_train_loss': train_loss,
+                                                'total_val_loss': total_val_loss},
+                                                total_steps)
+                            model.train()
 
                 if (iters_til_checkpoint is not None) and (not total_steps % iters_til_checkpoint) and rank == 0:
                     torch.save(model.state_dict(),

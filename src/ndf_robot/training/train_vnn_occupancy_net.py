@@ -42,7 +42,6 @@ opt = p.parse_args()
 train_dataset = dataio.JointOccTrainDataset(128, depth_aug=opt.depth_aug, multiview_aug=opt.multiview_aug, obj_class=opt.obj_class)
 val_dataset = dataio.JointOccTrainDataset(128, phase='val', depth_aug=opt.depth_aug, multiview_aug=opt.multiview_aug, obj_class=opt.obj_class)
 
-
 train_dataloader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True,
                               drop_last=True, num_workers=6)
 val_dataloader = DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=True,
