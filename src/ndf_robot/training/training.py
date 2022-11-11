@@ -2,6 +2,7 @@
 '''
 
 import torch
+from torch.utils.data.datapipes.datapipe import _IterDataPipeSerializationWrapper
 from torch.utils.tensorboard import SummaryWriter
 from tqdm.autonotebook import tqdm
 import time
@@ -72,6 +73,7 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
     total_steps = 0
     with tqdm(total=len(train_dataloader) * epochs) as pbar:
         train_losses = []
+        val_losses = []
         for epoch in range(epochs):
             if not epoch % epochs_til_checkpoint and epoch and rank == 0:
                 torch.save(model.state_dict(),
@@ -79,11 +81,13 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                 np.savetxt(os.path.join(checkpoints_dir, 'train_losses_%04d_iter_%06d.pth' % (epoch, total_steps)),
                            np.array(train_losses))
             
+            total_train_loss = 0
+            iterations = 0
+            start_time = time.time()
             for step, (model_input, gt) in enumerate(train_dataloader):
+                iterations += 1  
                 model_input = util.dict_to_gpu(model_input)
                 gt = util.dict_to_gpu(gt)
-
-                start_time = time.time()
 
                 model_output = model(model_input)
                 losses = loss_fn(model_output, gt)
@@ -93,19 +97,20 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                 for loss_name, loss in losses.items():
                     single_loss = loss.mean()
 
-                    if rank == 0:
-                        writer.add_scalar(loss_name, single_loss, total_steps)
+                    # if rank == 0:
+                    #     writer.add_scalar(loss_name, single_loss, total_steps)
                     train_loss += single_loss
 
                 train_losses.append(train_loss.item())
-                
+                total_train_loss += train_loss
+
                 # if rank == 0:
                 #     writer.add_scalar("total_train_loss", train_loss, total_steps)
 
-                if not total_steps % steps_til_summary and rank == 0:
-                    torch.save(model.state_dict(),
-                               os.path.join(checkpoints_dir, 'model_current.pth'))
-                    summary_fn(model, model_input, gt, model_output, writer, total_steps)
+                # if not total_steps % steps_til_summary and rank == 0:
+                #     torch.save(model.state_dict(),
+                #                os.path.join(checkpoints_dir, 'model_current.pth'))
+                #     summary_fn(model, model_input, gt, model_output, writer, total_steps)
 
                 for optim in optimizers:
                     optim.zero_grad()
@@ -126,53 +131,88 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                 if rank == 0:
                     pbar.update(1)
 
-                if not total_steps % steps_til_summary and rank == 0:
-                    print("Epoch %d, Total loss %0.6f, iteration time %0.6f" % (epoch, train_loss, time.time() - start_time))
+                # if not total_steps % steps_til_summary and rank == 0:
+                #     print("Epoch %d, Total loss %0.6f, iteration time %0.6f" % (epoch, train_loss, time.time() - start_time))
 
-                    if val_dataloader is not None:
-                        print("Running validation set...")
-                        with torch.no_grad():
-                            model.eval()
-                            val_losses = defaultdict(list)
-                            for val_i, (model_input, gt) in enumerate(val_dataloader):
-                                model_input = util.dict_to_gpu(model_input)
-                                gt = util.dict_to_gpu(gt)
+                #     if val_dataloader is not None:
+                #         print("Running validation set...")
+                #         with torch.no_grad():
+                #             model.eval()
+                #             val_losses = defaultdict(list)
+                #             for val_i, (model_input, gt) in enumerate(val_dataloader):
+                #                 model_input = util.dict_to_gpu(model_input)
+                #                 gt = util.dict_to_gpu(gt)
 
-                                model_output = model(model_input)
-                                val_loss = val_loss_fn(model_output, gt, val=True)
+                #                 model_output = model(model_input)
+                #                 val_loss = val_loss_fn(model_output, gt, val=True)
 
-                                for name, value in val_loss.items():
-                                    val_losses[name].append(value.cpu().numpy())
+                #                 for name, value in val_loss.items():
+                #                     val_losses[name].append(value.cpu().numpy())
 
-                                if val_i == batches_per_validation:
-                                    break
+                #                 if val_i == batches_per_validation:
+                #                     break
                         
-                        total_val_loss = 0
-                        for loss_name, loss in val_losses.items():
-                            single_loss = np.mean(loss)
-                            summary_fn(model, model_input, gt, model_output, writer, total_steps, 'val_')
-                            writer.add_scalar('val_' + loss_name, single_loss, total_steps)
+                #         total_val_loss = 0
+                #         for loss_name, loss in val_losses.items():
+                #             single_loss = np.mean(loss)
+                #             summary_fn(model, model_input, gt, model_output, writer, total_steps, 'val_')
+                #             writer.add_scalar('val_' + loss_name, single_loss, total_steps)
                             
-                            total_val_loss += single_loss
+                #             total_val_loss += single_loss
                         
-                        # Write total_train_loss & total_val_loss
-                        writer.add_scalars('total_loss', 
-                                            {'total_train_loss': train_loss,
-                                            'total_val_loss': total_val_loss},
-                                            total_steps)
+                #         # Write total_train_loss & total_val_loss
+                #         writer.add_scalars('total_loss', 
+                #                             {'total_train_loss': train_loss,
+                #                             'total_val_loss': total_val_loss},
+                #                             total_steps)
 
-                        model.train()
+                #         model.train()
 
-                if (iters_til_checkpoint is not None) and (not total_steps % iters_til_checkpoint) and rank == 0:
-                    torch.save(model.state_dict(),
-                               os.path.join(checkpoints_dir, 'model_epoch_%04d_iter_%06d.pth' % (epoch, total_steps)))
-                    np.savetxt(os.path.join(checkpoints_dir, 'train_losses_%04d_iter_%06d.pth' % (epoch, total_steps)),
-                               np.array(train_losses))
+                # if (iters_til_checkpoint is not None) and (not total_steps % iters_til_checkpoint) and rank == 0:
+                #     torch.save(model.state_dict(),
+                #                os.path.join(checkpoints_dir, 'model_epoch_%04d_iter_%06d.pth' % (epoch, total_steps)))
+                #     np.savetxt(os.path.join(checkpoints_dir, 'train_losses_%04d_iter_%06d.pth' % (epoch, total_steps)),
+                #                np.array(train_losses))
 
                 total_steps += 1
                 if max_steps is not None and total_steps==max_steps:
                     break
 
+            total_train_loss /= iterations
+            if rank == 0:
+                print("Epoch %d, Total loss %0.6f, Iteration time %0.6f" % (epoch, train_loss, time.time() - start_time))
+
+                if val_dataloader is not None:
+                    print("Running validation set...")
+                    with torch.no_grad():
+                        model.eval()
+
+                        total_val_loss = 0
+                        for val_i, (model_input, gt) in enumerate(val_dataloader): 
+                            model_input = util.dict_to_gpu(model_input)
+                            gt = util.dict_to_gpu(gt)
+
+                            model_output = model(model_input)
+                            losses = loss_fn(model_output, gt)
+                            # losses = loss_fn(model_output, gt, model_input, model)
+
+                            val_loss = 0
+                            for loss_name, loss in losses.items():
+                                single_loss = loss.mean()
+                                val_loss += single_loss
+                            total_val_loss += val_loss
+                            
+                            if val_i == batches_per_validation:
+                                break
+                        total_val_loss /= (val_i + 1)
+                        
+                    # Write total_train_loss & total_val_loss
+                    writer.add_scalars('total_loss', 
+                                        {'total_train_loss': total_train_loss,
+                                        'total_val_loss': total_val_loss},
+                                        epoch)
+
+                    model.train()
             if max_steps is not None and total_steps==max_steps:
                 break
 
