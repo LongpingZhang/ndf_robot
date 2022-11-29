@@ -4,6 +4,8 @@ import configargparse
 import torch
 from torch.utils.data import DataLoader
 
+import sys
+sys.path.append('/content/ndf_robot/src/')
 import ndf_robot.model.vnn_occupancy_net_pointnet_dgcnn as vnn_occupancy_network
 from ndf_robot.training import summaries, losses, training, dataio, config
 from ndf_robot.utils import path_util

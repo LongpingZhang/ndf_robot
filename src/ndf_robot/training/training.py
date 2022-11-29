@@ -12,6 +12,8 @@ import shutil
 from collections import defaultdict
 import torch.distributed as dist
 
+import sys
+sys.path.append('/content/ndf_robot/src/')
 import ndf_robot.training.util as util
 
 
@@ -97,8 +99,8 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                 for loss_name, loss in losses.items():
                     single_loss = loss.mean()
 
-                    # if rank == 0:
-                    #     writer.add_scalar(loss_name, single_loss, total_steps)
+                    if rank == 0:
+                        writer.add_scalar(loss_name, single_loss, total_steps)
                     train_loss += single_loss
 
                 train_losses.append(train_loss.item())
@@ -207,7 +209,7 @@ def train(model, train_dataloader, epochs, lr, steps_til_summary, epochs_til_che
                         total_val_loss /= (val_i + 1)
                         
                     # Write total_train_loss & total_val_loss
-                    writer.add_scalars('total_loss', 
+                    writer.add_scalars('total_loss/', 
                                         {'total_train_loss': total_train_loss,
                                         'total_val_loss': total_val_loss},
                                         epoch)

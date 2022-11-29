@@ -31,6 +31,7 @@ ipython
 tqdm
 jedi==0.17.2
 plotly>=4.14
+kaleido>=0.2.1
 trimesh>=3.9
 rtree>=0.9.7
 networkx>=2.3
