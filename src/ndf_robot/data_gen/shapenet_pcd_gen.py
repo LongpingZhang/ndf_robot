@@ -15,6 +15,8 @@ import pybullet as p
 from airobot.utils.pb_util import create_pybullet_client
 from airobot.utils import common
 
+import sys
+sys.path.append('/content/ndf_robot/src/')
 from ndf_robot.config.default_data_gen_cfg import get_data_gen_cfg_defaults
 from ndf_robot.utils import util, path_util
 from ndf_robot.robot.multicam import MultiCams
@@ -193,6 +195,8 @@ def worker_gen(child_conn, global_dict, worker_flag_dict, seed, worker_id):
                 table_seg_depth = flat_depth[table_inds[0]]
                 
                 obj_pts = pts_raw[obj_inds[0], :]
+                if int(table_inds[0].shape[0]/500) == 0:
+                  continue
                 table_pts = pts_raw[table_inds[0], :][::int(table_inds[0].shape[0]/500)]
                 obj_pcd_pts.append(util.crop_pcd(obj_pts))
                 uncropped_obj_pcd_pts.append(obj_pts)
@@ -377,7 +381,7 @@ def main(args):
     objects_raw = os.listdir(shapenet_centered_models_dir) 
     objects_filtered = [fn for fn in objects_raw if fn not in bad_shapenet_ids_list]
     total_filtered = len(objects_filtered)
-    train_n = int(total_filtered * 0.9)
+    train_n = int(total_filtered * 0.8)
 
     train_objects = sorted(objects_filtered)[0:train_n]
     test_objects = sorted(objects_filtered)[train_n:]
