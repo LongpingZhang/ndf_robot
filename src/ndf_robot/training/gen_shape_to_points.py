@@ -8,6 +8,8 @@ from scipy.ndimage import convolve
 import pickle
 import trimesh
 
+import sys
+sys.path.append('/content/ndf_robot/src/')
 from ndf_robot.utils import path_util
 
 # obj_class = 'mug'
